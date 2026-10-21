@@ -1,0 +1,56 @@
+
+name: Static HTML CI/CD
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Validate HTML
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check registration page
+        run: |
+          test -f index.html
+          grep -q '<html' index.html
+          grep -q '</html>' index.html
+          grep -q '<form' index.html
+          echo "HTML checks passed."
+
+      - name: Upload website artifact
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+
+  deploy:
+    name: Deploy to GitHub Pages
+    if: github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+
+    permissions:
+      pages: write
+      id-token: write
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Deploy website
+        id: deployment
+        uses: actions/deploy-pages@v4
